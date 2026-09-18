@@ -1,16 +1,16 @@
 """Функциональный пайплайн для ДЗ 2.
 
 Задание 2.2:
-- pipe(*fns) — применяет функции слева направо
-- compose(*fns) — применяет функции справа налево
-- filter_by(**kwargs) — фильтрация по атрибутам/ключам
-- sort_by(key) — сортировка по ключу
-- take(n) — первые N элементов
+- pipe(*fns) - применяет функции слева направо
+- compose(*fns) - применяет функции справа налево
+- filter_by(**kwargs) - фильтрация по атрибутам/ключам
+- sort_by(key) - сортировка по ключу
+- take(n) - первые N элементов
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 
@@ -22,8 +22,13 @@ def pipe(*fns: Callable[..., Any]) -> Callable[..., Any]:
         pipe(str.upper, str.strip)("  hello  ")  # "HELLO"
         pipe(add_one, double)(5)  # double(add_one(5)) = 12
     """
-    # TODO: реализовать
-    raise NotImplementedError("pipe не реализован")
+
+    def piped(value: Any) -> Any:
+        for fn in fns:
+            value = fn(value)
+        return value
+
+    return piped
 
 
 def compose(*fns: Callable[..., Any]) -> Callable[..., Any]:
@@ -33,8 +38,7 @@ def compose(*fns: Callable[..., Any]) -> Callable[..., Any]:
 
         compose(double, add_one)(5)  # double(add_one(5)) = 12
     """
-    # TODO: реализовать
-    raise NotImplementedError("compose не реализован")
+    return pipe(*reversed(fns))
 
 
 def filter_by(**kwargs: Any) -> Callable[[list[Any]], list[Any]]:
@@ -45,8 +49,14 @@ def filter_by(**kwargs: Any) -> Callable[[list[Any]], list[Any]]:
         users = [{"name": "Alice", "active": True}, {"name": "Bob", "active": False}]
         filter_by(active=True)(users)  # [{"name": "Alice", "active": True}]
     """
-    # TODO: реализовать
-    raise NotImplementedError("filter_by не реализован")
+
+    def matches(item: Any) -> bool:
+        return all(_field(item, name) == expected for name, expected in kwargs.items())
+
+    def apply(items: list[Any]) -> list[Any]:
+        return [item for item in items if matches(item)]
+
+    return apply
 
 
 def sort_by(key: str, *, reverse: bool = False) -> Callable[[list[Any]], list[Any]]:
@@ -56,8 +66,11 @@ def sort_by(key: str, *, reverse: bool = False) -> Callable[[list[Any]], list[An
 
         sort_by("name")(users)  # отсортировано по name
     """
-    # TODO: реализовать
-    raise NotImplementedError("sort_by не реализован")
+
+    def apply(items: list[Any]) -> list[Any]:
+        return sorted(items, key=lambda item: _field(item, key), reverse=reverse)
+
+    return apply
 
 
 def take(n: int) -> Callable[[list[Any]], list[Any]]:
@@ -67,5 +80,16 @@ def take(n: int) -> Callable[[list[Any]], list[Any]]:
 
         take(2)([1, 2, 3, 4])  # [1, 2]
     """
-    # TODO: реализовать
-    raise NotImplementedError("take не реализован")
+    if n < 0:
+        raise ValueError("n must not be negative")
+
+    def apply(items: list[Any]) -> list[Any]:
+        return list(items[:n])
+
+    return apply
+
+
+def _field(item: Any, name: str) -> Any:
+    if isinstance(item, Mapping):
+        return item[name]
+    return getattr(item, name)
